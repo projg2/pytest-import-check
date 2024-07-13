@@ -26,3 +26,6 @@ Homepage = "https://github.com/projg2/pytest-import-check/"
 
 [project.entry-points.pytest11]
 import-check = "pytest_import_check"
+
+[tool.pytest.ini_options]
+xfail_strict = true
