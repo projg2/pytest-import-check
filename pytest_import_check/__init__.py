@@ -60,6 +60,5 @@ class ImportCheckItem(pytest.Item):
         return (
             self.fspath,
             None,
-            f"{self.config.invocation_dir.bestrelpath(self.fspath)}"
-            "::import-check",
+            self.config.invocation_dir.bestrelpath(self.fspath),
         )
