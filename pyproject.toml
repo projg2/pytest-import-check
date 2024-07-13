@@ -1,0 +1,28 @@
+[build-system]
+requires = ["flit_core >=3.7,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "pytest-import-check"
+authors = [{name = "Michał Górny", email = "mgorny@gentoo.org"}]
+readme = "README.rst"
+dynamic = ["version", "description"]
+license = {text = "GPL-2.0-or-later"}
+requires-python = ">=3.8"
+dependencies = [
+    "pytest >= 7.0.0",
+]
+classifiers = [
+]
+
+[tool.flit.sdist]
+include = [
+    "test",
+    "tox.ini",
+]
+
+[project.urls]
+Homepage = "https://github.com/projg2/pytest-import-check/"
+
+[project.entry-points.pytest11]
+import-check = "pytest_import_check"
