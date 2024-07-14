@@ -50,8 +50,7 @@ class ImportCheckItem(pytest.Item):
 
     def repr_failure(self, exc_info):
         if exc_info.errisinstance(SyntaxError):
-            # TODO: pretty format it
-            exc_info.traceback = exc_info.traceback[-1:]
+            return exc_info.exconly()
         else:
             exc_info.traceback = exc_info.traceback.cut(self.fspath)
         return super().repr_failure(exc_info)
