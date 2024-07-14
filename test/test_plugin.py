@@ -71,6 +71,20 @@ def test_package_absolute_imports(pytester):
     ])
 
 
+def test_package_absolute_imports_src(pytester):
+    pytester.mkdir("src")
+    foo = pytester.mkpydir("src/foo")
+    (foo / "foo.py").write_text("import foo.bar")
+    (foo / "bar.py").write_text("import foo")
+    result = run(pytester)
+    result.assert_outcomes(passed=3)
+    result.stdout.fnmatch_lines([
+        "src/foo/__init__.py::import-check*PASSED*",
+        "src/foo/bar.py::import-check*PASSED*",
+        "src/foo/foo.py::import-check*PASSED*",
+    ])
+
+
 def test_package_relative_imports(pytester):
     foo = pytester.mkpydir("foo")
     (foo / "foo.py").write_text("from . import bar")
