@@ -5,7 +5,7 @@
 
 import pytest
 
-from pytest_import_check.importer import import_path
+from pytest_import_check.importer import import_path, SHLIB_SUFFIX
 
 
 __version__ = "0.0.1"
@@ -27,7 +27,7 @@ def pytest_collect_file(file_path, parent):
     if not parent.config.option.import_check:
         return None
     # TODO: extensions
-    if file_path.suffix not in {".py", ".so"}:
+    if file_path.suffix not in {".py", SHLIB_SUFFIX}:
         return None
     return ImportCheckFile.from_parent(parent=parent, path=file_path)
 

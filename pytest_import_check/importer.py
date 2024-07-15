@@ -14,11 +14,15 @@ import importlib.util
 import itertools
 import os
 import sys
+import sysconfig
 
 from enum import Enum
 from importlib.machinery import ModuleSpec
 from pathlib import Path
 from types import ModuleType
+
+
+SHLIB_SUFFIX = sysconfig.get_config_var("SHLIB_SUFFIX")
 
 
 class ImportMode(Enum):
@@ -40,7 +44,7 @@ class ImportPathMismatchError(ImportError):
 
 def strip_suffix(path: Path) -> str:
     """Return module name without suffixes"""
-    if path.suffix == ".so":
+    if path.suffix == SHLIB_SUFFIX:
         path = path.with_suffix("")
     return path.with_suffix("")
 
