@@ -1,24 +1,30 @@
 # (c) 2024 Michał Górny
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import functools
+
+import pytest
+
+
 pytest_plugins = ["pytester"]
 
 
-def run(pytester, *args, **kwargs):
+@pytest.fixture
+def run(pytester):
     pytester.syspathinsert()
-    return pytester.runpytest(
-        "-vv", "--tb=long", "--import-check", "--import-mode=importlib",
-        *args, **kwargs)
+    yield functools.partial(pytester.runpytest,
+                            "-vv", "--tb=long", "--import-check",
+                            "--import-mode=importlib")
 
 
-def test_no_imports(pytester):
+def test_no_imports(run, pytester):
     pytester.makepyfile(good="print('Hello world')")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=1)
     result.stdout.fnmatch_lines(["good.py::import-check*PASSED*"])
 
 
-def test_stdlib_import(pytester):
+def test_stdlib_import(run, pytester):
     pytester.makepyfile(
         good="""
         import sys
@@ -26,21 +32,21 @@ def test_stdlib_import(pytester):
         if __name__ == "__main__":
             sys.exit(0)
         """)
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=1)
     result.stdout.fnmatch_lines(["good.py::import-check*PASSED*"])
 
 
-def test_pytest_import(pytester):
+def test_pytest_import(run, pytester):
     pytester.makepyfile(good="import pytest")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=1)
     result.stdout.fnmatch_lines(["good.py::import-check*PASSED*"])
 
 
-def test_samedir_import(pytester):
+def test_samedir_import(run, pytester):
     pytester.makepyfile(good="import other", other="")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=2)
     result.stdout.fnmatch_lines([
         "good.py::import-check*PASSED*",
@@ -48,9 +54,9 @@ def test_samedir_import(pytester):
     ])
 
 
-def test_samedir_cyclic_import(pytester):
+def test_samedir_cyclic_import(run, pytester):
     pytester.makepyfile(good="import other", other="import good")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=2)
     result.stdout.fnmatch_lines([
         "good.py::import-check*PASSED*",
@@ -58,11 +64,11 @@ def test_samedir_cyclic_import(pytester):
     ])
 
 
-def test_package_absolute_imports(pytester):
+def test_package_absolute_imports(run, pytester):
     foo = pytester.mkpydir("foo")
     (foo / "foo.py").write_text("import foo.bar")
     (foo / "bar.py").write_text("import foo")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=3)
     result.stdout.fnmatch_lines([
         "foo/__init__.py::import-check*PASSED*",
@@ -71,12 +77,12 @@ def test_package_absolute_imports(pytester):
     ])
 
 
-def test_package_absolute_imports_src(pytester):
+def test_package_absolute_imports_src(run, pytester):
     pytester.mkdir("src")
     foo = pytester.mkpydir("src/foo")
     (foo / "foo.py").write_text("import foo.bar")
     (foo / "bar.py").write_text("import foo")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=3)
     result.stdout.fnmatch_lines([
         "src/foo/__init__.py::import-check*PASSED*",
@@ -85,11 +91,11 @@ def test_package_absolute_imports_src(pytester):
     ])
 
 
-def test_package_relative_imports(pytester):
+def test_package_relative_imports(run, pytester):
     foo = pytester.mkpydir("foo")
     (foo / "foo.py").write_text("from . import bar")
     (foo / "bar.py").write_text("from . import *")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=3)
     result.stdout.fnmatch_lines([
         "foo/__init__.py::import-check*PASSED*",
@@ -98,11 +104,11 @@ def test_package_relative_imports(pytester):
     ])
 
 
-def test_namespace_package_absolute_imports(pytester):
+def test_namespace_package_absolute_imports(run, pytester):
     foo = pytester.mkdir("foo")
     (foo / "foo.py").write_text("import foo.bar")
     (foo / "bar.py").write_text("import foo")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=2)
     result.stdout.fnmatch_lines([
         "foo/bar.py::import-check*PASSED*",
@@ -110,11 +116,11 @@ def test_namespace_package_absolute_imports(pytester):
     ])
 
 
-def test_namespace_package_relative_imports(pytester):
+def test_namespace_package_relative_imports(run, pytester):
     foo = pytester.mkdir("foo")
     (foo / "foo.py").write_text("from . import bar")
     (foo / "bar.py").write_text("from . import *")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(passed=2)
     result.stdout.fnmatch_lines([
         "foo/bar.py::import-check*PASSED*",
@@ -122,9 +128,9 @@ def test_namespace_package_relative_imports(pytester):
     ])
 
 
-def test_bad_import(pytester):
+def test_bad_import(run, pytester):
     pytester.makepyfile(bad="import this_package_really_shouldnt_exist")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
         "bad.py::import-check*FAILED*",
@@ -137,9 +143,9 @@ def test_bad_import(pytester):
     result.stdout.no_fnmatch_line("*importlib*")
 
 
-def test_other_exception(pytester):
+def test_other_exception(run, pytester):
     pytester.makepyfile(bad="1 / 0")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
         "bad.py::import-check*FAILED*",
@@ -152,9 +158,9 @@ def test_other_exception(pytester):
     result.stdout.no_fnmatch_line("*importlib*")
 
 
-def test_syntax_error(pytester):
+def test_syntax_error(run, pytester):
     pytester.makepyfile(bad="/ / /")
-    result = run(pytester)
+    result = run()
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
         "bad.py::import-check*FAILED*",
@@ -167,14 +173,14 @@ def test_syntax_error(pytester):
     #result.stdout.no_fnmatch_line("*importlib*")
 
 
-def test_warning(pytester):
+def test_warning(run, pytester):
     pytester.makepyfile(
         warn="""
         import warnings
 
         warnings.warn("test warning")
         """)
-    result = run(pytester, "-Wdefault")
+    result = run("-Wdefault")
     result.assert_outcomes(passed=1)
     result.stdout.fnmatch_lines([
         "warn.py::import-check*PASSED*",
@@ -182,14 +188,14 @@ def test_warning(pytester):
     ])
 
 
-def test_werror(pytester):
+def test_werror(run, pytester):
     pytester.makepyfile(
         warn="""
         import warnings
 
         warnings.warn("test warning")
         """)
-    result = run(pytester, "-Werror")
+    result = run("-Werror")
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
         "warn.py::import-check*FAILED*",
