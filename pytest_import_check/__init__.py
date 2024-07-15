@@ -4,7 +4,8 @@
 """pytest plugin to check whether Python modules can be imported"""
 
 import pytest
-from _pytest.pathlib import import_path
+
+from pytest_import_check.importer import import_path
 
 
 __version__ = "0.0.1"
