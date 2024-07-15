@@ -170,7 +170,7 @@ def test_syntax_error(run, pytester):
     ])
     # check whether we got nicely stripped traceback
     result.stdout.no_fnmatch_line("*/_pytest/*")
-    #result.stdout.no_fnmatch_line("*importlib*")
+    result.stdout.no_fnmatch_line("*importlib*")
 
 
 def test_warning(run, pytester):
