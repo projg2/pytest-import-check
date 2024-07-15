@@ -13,6 +13,12 @@ dependencies = [
     "pytest >= 7.0.0",
 ]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Testing",
 ]
 
 [tool.flit.sdist]
