@@ -17,6 +17,7 @@ classifiers = [
 
 [tool.flit.sdist]
 include = [
+    "COPYING",
     "test",
     "tox.ini",
 ]
