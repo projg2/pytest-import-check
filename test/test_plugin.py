@@ -14,12 +14,19 @@ def import_mode(request):
     yield request.param
 
 
+@pytest.fixture(params=["false", "true"])
+def consider_namespace_packages(request):
+    yield request.param
+
+
 @pytest.fixture
-def run(pytester, import_mode):
+def run(pytester, import_mode, consider_namespace_packages):
     pytester.syspathinsert()
     yield functools.partial(pytester.runpytest,
                             "-vv", "--tb=long", "--import-check",
-                            f"--import-mode={import_mode}")
+                            f"--import-mode={import_mode}",
+                            "--override-ini=consider_namespace_packages="
+                            f"{consider_namespace_packages}")
 
 
 def test_no_imports(run, pytester):
@@ -82,7 +89,10 @@ def test_package_absolute_imports(run, pytester):
     ])
 
 
-def test_package_absolute_imports_src(run, pytester):
+def test_package_absolute_imports_src(run, pytester,
+                                      consider_namespace_packages):
+    if consider_namespace_packages == "true":
+        pytest.skip("consider_namespace_packages=true breaks src layout")
     pytester.mkdir("src")
     foo = pytester.mkpydir("src/foo")
     (foo / "foo.py").write_text("import foo.bar")
@@ -109,9 +119,11 @@ def test_package_relative_imports(run, pytester):
     ])
 
 
-def test_namespace_package_absolute_imports(run, import_mode, pytester):
-    if import_mode != "importlib":
-        pytest.skip("Namespaces supported in --import-mode=importlib only")
+def test_namespace_package_absolute_imports(run, pytester, import_mode,
+                                            consider_namespace_packages):
+    if import_mode != "importlib" and consider_namespace_packages == "false":
+        pytest.skip("Namespaces require --import-mode=importlib or "
+                    "consider_namespace_packages=true")
     foo = pytester.mkdir("foo")
     (foo / "foo.py").write_text("import foo.bar")
     (foo / "bar.py").write_text("import foo")
@@ -123,9 +135,11 @@ def test_namespace_package_absolute_imports(run, import_mode, pytester):
     ])
 
 
-def test_namespace_package_relative_imports(run, import_mode, pytester):
-    if import_mode != "importlib":
-        pytest.skip("Namespaces supported in --import-mode=importlib only")
+def test_namespace_package_relative_imports(run, pytester, import_mode,
+                                            consider_namespace_packages):
+    if import_mode != "importlib" and consider_namespace_packages == "false":
+        pytest.skip("Namespaces require --import-mode=importlib or "
+                    "consider_namespace_packages=true")
     foo = pytester.mkdir("foo")
     (foo / "foo.py").write_text("from . import bar")
     (foo / "bar.py").write_text("from . import *")
