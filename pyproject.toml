@@ -28,6 +28,11 @@ include = [
     "tox.ini",
 ]
 
+[project.optional-dependencies]
+test = [
+    "setuptools",
+]
+
 [project.urls]
 Homepage = "https://github.com/projg2/pytest-import-check/"
 

@@ -38,6 +38,13 @@ class ImportPathMismatchError(ImportError):
     """
 
 
+def strip_suffix(path: Path) -> str:
+    """Return module name without suffixes"""
+    if path.suffix == ".so":
+        path = path.with_suffix("")
+    return path.with_suffix("")
+
+
 def import_path(
     path: str | os.PathLike[str],
     *,
@@ -122,7 +129,9 @@ def import_path(
             path, consider_namespace_packages=consider_namespace_packages
         )
     except CouldNotResolvePathError:
-        pkg_root, module_name = path.parent, path.stem
+        path_without_suffix = strip_suffix(path)
+        pkg_root, module_name = (path_without_suffix.parent,
+                                 path_without_suffix.name)
 
     # Change sys.path permanently: restoring it at the end of this function would cause surprising
     # problems because of delayed imports: for example, a conftest.py file imported by this function
@@ -256,7 +265,7 @@ def module_name_from_path(path: Path, root: Path) -> str:
     For example: path="projects/src/tests/test_foo.py" and root="/projects", the
     resulting module name will be "src.tests.test_foo".
     """
-    path = path.with_suffix("")
+    path = strip_suffix(path)
     try:
         relative_path = path.relative_to(root)
     except ValueError:
@@ -408,7 +417,7 @@ def is_importable(module_name: str, module_path: Path) -> bool:
 def compute_module_name(root: Path, module_path: Path) -> str | None:
     """Compute a module name based on a path and a root anchor."""
     try:
-        path_without_suffix = module_path.with_suffix("")
+        path_without_suffix = strip_suffix(module_path)
     except ValueError:
         # Empty paths (such as Path.cwd()) might break meta_path hooks (like our own assertion rewriter).
         return None

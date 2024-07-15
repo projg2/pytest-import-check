@@ -27,7 +27,7 @@ def pytest_collect_file(file_path, parent):
     if not parent.config.option.import_check:
         return None
     # TODO: extensions
-    if file_path.suffix not in {".py"}:
+    if file_path.suffix not in {".py", ".so"}:
         return None
     return ImportCheckFile.from_parent(parent=parent, path=file_path)
 
