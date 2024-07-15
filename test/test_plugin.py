@@ -9,12 +9,17 @@ import pytest
 pytest_plugins = ["pytester"]
 
 
+@pytest.fixture(params=["importlib", "prepend"])
+def import_mode(request):
+    yield request.param
+
+
 @pytest.fixture
-def run(pytester):
+def run(pytester, import_mode):
     pytester.syspathinsert()
     yield functools.partial(pytester.runpytest,
                             "-vv", "--tb=long", "--import-check",
-                            "--import-mode=importlib")
+                            f"--import-mode={import_mode}")
 
 
 def test_no_imports(run, pytester):
@@ -104,7 +109,9 @@ def test_package_relative_imports(run, pytester):
     ])
 
 
-def test_namespace_package_absolute_imports(run, pytester):
+def test_namespace_package_absolute_imports(run, import_mode, pytester):
+    if import_mode != "importlib":
+        pytest.skip("Namespaces supported in --import-mode=importlib only")
     foo = pytester.mkdir("foo")
     (foo / "foo.py").write_text("import foo.bar")
     (foo / "bar.py").write_text("import foo")
@@ -116,7 +123,9 @@ def test_namespace_package_absolute_imports(run, pytester):
     ])
 
 
-def test_namespace_package_relative_imports(run, pytester):
+def test_namespace_package_relative_imports(run, import_mode, pytester):
+    if import_mode != "importlib":
+        pytest.skip("Namespaces supported in --import-mode=importlib only")
     foo = pytester.mkdir("foo")
     (foo / "foo.py").write_text("from . import bar")
     (foo / "bar.py").write_text("from . import *")
