@@ -20,8 +20,6 @@ from importlib.machinery import ModuleSpec
 from pathlib import Path
 from types import ModuleType
 
-from _pytest.compat import assert_never
-
 
 class ImportMode(Enum):
     """Possible values for `mode` parameter of `import_path`."""
@@ -136,7 +134,7 @@ def import_path(
         if str(pkg_root) != sys.path[0]:
             sys.path.insert(0, str(pkg_root))
     else:
-        assert_never(mode)
+        assert False, f"invalid import mode: {mode}"
 
     importlib.import_module(module_name)
 
