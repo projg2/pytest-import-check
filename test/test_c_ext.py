@@ -7,8 +7,13 @@ import sys
 import pytest
 
 
+@pytest.fixture(params=[False, True])
+def py_limited_api(request):
+    yield request.param
+
+
 @pytest.fixture
-def build_c_ext(pytester):
+def build_c_ext(pytester, py_limited_api):
     def inner():
         pytester.makefile(".c", test="""
             #define PY_SSIZE_T_CLEAN
@@ -28,14 +33,15 @@ def build_c_ext(pytester):
                 return PyModule_Create(&testmodule);
             }
         """)
-        pytester.makepyfile(setup="""
+        pytester.makepyfile(setup=f"""
             from setuptools import setup, Extension
 
             setup(name="test",
                   version="0",
                   ext_modules=[
                       Extension(name="test",
-                                sources=["test.c"]),
+                                sources=["test.c"],
+                                py_limited_api={py_limited_api}),
                   ])
         """)
         subprocess.run([sys.executable, "setup.py", "build_ext", "-i"],
