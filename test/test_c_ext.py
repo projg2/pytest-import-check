@@ -1,6 +1,7 @@
 # (c) 2024 Michał Górny
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import os
 import subprocess
 import sys
 
@@ -58,6 +59,9 @@ def test_c_ext(run, build_c_ext):
     result.assert_outcomes(passed=1)
 
 
+@pytest.mark.skipif(os.name == "nt",
+                    reason="Python on Windows crashes on loading an extension "
+                    "with undefined symbols (!)")
 def test_c_ext_undefined_symbol(run, build_c_ext):
     build_c_ext(code="this_function_does_not_exist();")
     result = run("--ignore=setup.py")
