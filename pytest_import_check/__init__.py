@@ -5,7 +5,10 @@
 
 import pytest
 
-from pytest_import_check.importer import import_path, SUFFIXES
+from pytest_import_check.importer import (import_path,
+                                          SUFFIXES,
+                                          EXTENSION_SUFFIXES,
+                                          )
 
 
 __version__ = "0.0.2"
@@ -50,6 +53,8 @@ class ImportCheckItem(pytest.Item):
 
     def repr_failure(self, exc_info):
         if exc_info.errisinstance(SyntaxError):
+            return exc_info.exconly()
+        elif str(self.fspath).endswith(tuple(EXTENSION_SUFFIXES)):
             return exc_info.exconly()
         else:
             exc_info.traceback = exc_info.traceback.cut(self.fspath)

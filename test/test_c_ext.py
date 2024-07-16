@@ -67,9 +67,8 @@ def test_c_ext_undefined_symbol(run, build_c_ext):
     result = run("--ignore=setup.py")
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
-        "test.*::import-check*FAILED*",
-        "E*ImportError*test.*this_function_does_not_exist*",
+        "ImportError*test.*this_function_does_not_exist*",
     ])
     # check whether we got nicely stripped traceback
-    #result.stdout.no_fnmatch_line("*/_pytest/*")
-    #result.stdout.no_fnmatch_line("*importlib*")
+    result.stdout.no_fnmatch_line("*/_pytest/*")
+    result.stdout.no_fnmatch_line("*importlib*")
