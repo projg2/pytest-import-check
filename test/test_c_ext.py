@@ -37,14 +37,22 @@ def build_c_ext(pytester, py_limited_api):
             }}
         """)
         pytester.makepyfile(setup=f"""
+            import os
+
             from setuptools import setup, Extension
+
+            extra_link_args = []
+            # TODO: this should really be per-linker
+            if os.name == "nt":
+                extra_link_args.append("/force:unresolved")
 
             setup(name="test",
                   version="0",
                   ext_modules=[
                       Extension(name="test",
                                 sources=["test.c"],
-                                py_limited_api={py_limited_api}),
+                                py_limited_api={py_limited_api},
+                                extra_link_args=extra_link_args),
                   ])
         """)
         subprocess.run([sys.executable, "setup.py", "build_ext", "-i"],
