@@ -10,7 +10,7 @@ dynamic = ["version", "description"]
 license = {text = "GPL-2.0-or-later"}
 requires-python = ">=3.9"
 dependencies = [
-    "pytest >= 7.0.0",
+    "pytest >= 8.1",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
