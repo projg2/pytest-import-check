@@ -57,6 +57,7 @@ def test_c_ext(run, build_c_ext):
     build_c_ext()
     result = run("--ignore=setup.py")
     result.assert_outcomes(passed=1)
+    result.stdout.fnmatch_lines(["test.*::import-check*PASSED*"])
 
 
 @pytest.mark.skipif(os.name == "nt",
@@ -67,7 +68,89 @@ def test_c_ext_undefined_symbol(run, build_c_ext):
     result = run("--ignore=setup.py")
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
+        "test.*::import-check*FAILED*",
         "E*ImportError*test.*this_function_does_not_exist*",
+    ])
+    # check whether we got nicely stripped traceback
+    result.stdout.no_fnmatch_line("*/_pytest/*")
+    result.stdout.no_fnmatch_line("*importlib*")
+
+
+def test_c_ext_import_py(pytester, run, build_c_ext):
+    pytester.makepyfile(foo="")
+    build_c_ext(code='if (!PyImport_ImportModule("foo")) return NULL;')
+    result = run("--ignore=setup.py")
+    result.assert_outcomes(passed=2)
+    result.stdout.fnmatch_lines([
+        "foo.py::import-check*PASSED*",
+        "test.*::import-check*PASSED*",
+    ])
+
+
+def test_c_ext_import_nonexisting(pytester, run, build_c_ext):
+    build_c_ext(code="""
+        if (!PyImport_ImportModule("this_package_really_shouldnt_exist"))
+            return NULL;
+    """)
+    result = run("--ignore=setup.py")
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines([
+        "test.*::import-check*FAILED*",
+        "E*ModuleNotFoundError*this_package_really_shouldnt_exist*",
+    ])
+    # check whether we got nicely stripped traceback
+    result.stdout.no_fnmatch_line("*/_pytest/*")
+    result.stdout.no_fnmatch_line("*importlib*")
+
+
+def test_c_ext_import_syntax_error(pytester, run, build_c_ext):
+    pytester.makepyfile(bad="/ / /")
+    build_c_ext(code="""
+        if (!PyImport_ImportModule("bad"))
+            return NULL;
+    """)
+    result = run("--ignore=setup.py", "--ignore=bad.py")
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines([
+        "test.*::import-check*FAILED*",
+        "E*File*/bad.py*line 1",
+        "*/ / /",
+        "*SyntaxError:*",
+    ])
+    # check whether we got nicely stripped traceback
+    result.stdout.no_fnmatch_line("*/_pytest/*")
+    result.stdout.no_fnmatch_line("*importlib*")
+
+
+def test_c_ext_exception(pytester, run, build_c_ext):
+    build_c_ext(code="""
+        PyErr_SetString(PyExc_ValueError, "Imma failing");
+        return NULL;
+    """)
+    result = run("--ignore=setup.py")
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines([
+        "test.*::import-check*FAILED*",
+        "E*ValueError*Imma failing*",
+    ])
+    # check whether we got nicely stripped traceback
+    result.stdout.no_fnmatch_line("*/_pytest/*")
+    result.stdout.no_fnmatch_line("*importlib*")
+
+
+def test_c_ext_import_indirect_nonexisting(pytester, run, build_c_ext):
+    pytester.makepyfile(bad="import this_package_really_shouldnt_exist")
+    build_c_ext(code="""
+        if (!PyImport_ImportModule("bad"))
+            return NULL;
+    """)
+    result = run("--ignore=setup.py", "--ignore=bad.py")
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines([
+        "test.*::import-check*FAILED*",
+        ">*import this_package_really_shouldnt_exist",
+        "E*ModuleNotFoundError:*",
+        "bad.py:1: ModuleNotFoundError",
     ])
     # check whether we got nicely stripped traceback
     result.stdout.no_fnmatch_line("*/_pytest/*")
