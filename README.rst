@@ -9,9 +9,16 @@ Python modules installed by your package are importable.  This is mostly
 useful to quickly check packages that do not have tests at all or do not
 have all their modules covered by tests.
 
-To enable it, pass ``--import-check`` option to pytest, e.g.:
+To enable it, pass ``--import-check`` option to pytest, e.g.::
 
     pytest --import-check foo
+
+Please note that pytest will still perform the default collection
+and run any tests that it can find.  Note that this may result in quite
+verbose tracebacks.  If this is undesirable, you can disable
+the built-in ``python`` plugin::
+
+    pytest -p no:python --import-check foo
 
 
 Thanks
