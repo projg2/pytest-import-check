@@ -162,9 +162,9 @@ def test_syntax_error(run, pytester):
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
         "bad.py::import-check*FAILED*",
-        "*File*/bad.py*line 1",
+        "E*File*/bad.py*line 1",
         "*/ / /",
-        "SyntaxError:*",
+        "*SyntaxError:*",
     ])
     # check whether we got nicely stripped traceback
     result.stdout.no_fnmatch_line("*/_pytest/*")

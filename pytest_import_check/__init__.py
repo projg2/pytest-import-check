@@ -3,11 +3,14 @@
 
 """pytest plugin to check whether Python modules can be imported"""
 
+import importlib
+from pathlib import Path
+
 import pytest
 
+import pytest_import_check.importer
 from pytest_import_check.importer import (import_path,
                                           SUFFIXES,
-                                          EXTENSION_SUFFIXES,
                                           )
 
 
@@ -52,12 +55,24 @@ class ImportCheckItem(pytest.Item):
                         self.config.getini("consider_namespace_packages"))
 
     def repr_failure(self, exc_info):
-        if exc_info.errisinstance(SyntaxError):
-            return exc_info.exconly()
-        elif str(self.fspath).endswith(tuple(EXTENSION_SUFFIXES)):
-            return exc_info.exconly()
-        else:
-            exc_info.traceback = exc_info.traceback.cut(self.fspath)
+        importer_path = Path(pytest_import_check.importer.__file__)
+        done = []
+        def filter_cb(entry):
+            if done:
+                return True
+            if isinstance(entry.path, Path):
+                if entry.path == importer_path:
+                    return False
+                if entry.path.is_relative_to(importlib.__file__):
+                    return False
+            if isinstance(entry.path, str) and "importlib" in entry.path:
+                return False
+            done.append(True)
+            return True
+
+        exc_info.traceback = exc_info.traceback.cut(
+            importer_path).filter(filter_cb)
+
         return super().repr_failure(exc_info)
 
     def reportinfo(self):
