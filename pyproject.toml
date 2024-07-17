@@ -30,6 +30,7 @@ include = [
 
 [project.optional-dependencies]
 test = [
+    "meson",
     "setuptools",
 ]
 

@@ -155,3 +155,23 @@ def test_c_ext_import_indirect_nonexisting(pytester, run, build_c_ext):
     # check whether we got nicely stripped traceback
     result.stdout.no_fnmatch_line("*/_pytest/*")
     result.stdout.no_fnmatch_line("*importlib*")
+
+
+def test_c_library(pytester, run):
+    """Verify that non-extension libraries are ignored"""
+    pytester.makefile(".c", test="""
+        int frobnicate()
+        {
+            return 0;
+        }
+    """)
+    pytester.makefile(".build", meson=f"""
+        project('test', 'c')
+
+        testlib = shared_library('testlib', ['test.c'])
+    """)
+    build_dir = pytester.mkdir("build")
+    subprocess.run(["meson", "setup", build_dir], check=True)
+    subprocess.run(["meson", "compile", "-C", build_dir], check=True)
+    result = run("build")
+    result.assert_outcomes()

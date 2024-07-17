@@ -27,7 +27,10 @@ def pytest_configure(config):
 def pytest_collect_file(file_path, parent):
     if not parent.config.option.import_check:
         return None
-    if not file_path.name.endswith(SUFFIXES):
+    suffixes = set(SUFFIXES)
+    if len(suffixes) > 1:
+        suffixes.discard(".so")
+    if not file_path.name.endswith(tuple(suffixes)):
         return None
     return ImportCheckFile.from_parent(parent=parent, path=file_path)
 
