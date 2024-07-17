@@ -32,7 +32,6 @@ include = [
 test = [
     "meson",
     "ninja",
-    "setuptools",
 ]
 
 [project.urls]

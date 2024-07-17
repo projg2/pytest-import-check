@@ -37,39 +37,43 @@ def build_c_ext(pytester, py_limited_api):
                 return PyModule_Create(&testmodule);
             }}
         """)
-        pytester.makepyfile(setup=f"""
-            from setuptools import setup, Extension
+        pytester.makefile(".build", meson="""
+            project('test', 'c')
 
-            setup(name="test",
-                  version="0",
-                  ext_modules=[
-                      Extension(name="test",
-                                sources=["test.c"],
-                                py_limited_api={py_limited_api}),
-                  ])
+            pymod = import('python')
+            python = pymod.find_installation(get_option('python'))
+            python.extension_module('test', ['test.c'], limited_api : '3.9')
         """)
-        subprocess.run([sys.executable, "setup.py", "build_ext", "-i"],
-                       check=True)
+        pytester.makefile(".options", meson="""
+            option('python', type : 'string')
+        """)
+        build_dir = pytester.mkdir("build")
+        subprocess.run(["meson", "setup", build_dir,
+                        f"-Dpython={sys.executable}",
+                        f"-Dpython.allow_limited_api={py_limited_api}",
+                        ], check=True)
+        subprocess.run(["meson", "compile", "-C", build_dir], check=True)
+        return build_dir
     yield inner
 
 
 def test_c_ext(run, build_c_ext):
-    build_c_ext()
-    result = run("--ignore=setup.py")
+    build_dir = build_c_ext()
+    result = run(build_dir)
     result.assert_outcomes(passed=1)
-    result.stdout.fnmatch_lines(["test.*::import-check*PASSED*"])
+    result.stdout.fnmatch_lines(["build/test.*::import-check*PASSED*"])
 
 
 @pytest.mark.skipif(os.name == "nt",
                     reason="Python on Windows crashes on loading an extension "
                     "with undefined symbols (!)")
 def test_c_ext_undefined_symbol(run, build_c_ext):
-    build_c_ext(code="this_function_does_not_exist();")
-    result = run("--ignore=setup.py")
+    build_dir = build_c_ext(code="this_function_does_not_exist();")
+    result = run(build_dir)
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
-        "test.*::import-check*FAILED*",
-        "E*ImportError*test.*this_function_does_not_exist*",
+        "build/test.*::import-check*FAILED*",
+        "E*ImportError*build/test.*this_function_does_not_exist*",
     ])
     # check whether we got nicely stripped traceback
     result.stdout.no_fnmatch_line("*/_pytest/*")
@@ -78,24 +82,23 @@ def test_c_ext_undefined_symbol(run, build_c_ext):
 
 def test_c_ext_import_py(pytester, run, build_c_ext):
     pytester.makepyfile(foo="")
-    build_c_ext(code='if (!PyImport_ImportModule("foo")) return NULL;')
-    result = run("--ignore=setup.py")
-    result.assert_outcomes(passed=2)
+    build_dir = build_c_ext(code='if (!PyImport_ImportModule("foo")) return NULL;')
+    result = run(build_dir)
+    result.assert_outcomes(passed=1)
     result.stdout.fnmatch_lines([
-        "foo.py::import-check*PASSED*",
-        "test.*::import-check*PASSED*",
+        "build/test.*::import-check*PASSED*",
     ])
 
 
 def test_c_ext_import_nonexisting(pytester, run, build_c_ext):
-    build_c_ext(code="""
+    build_dir = build_c_ext(code="""
         if (!PyImport_ImportModule("this_package_really_shouldnt_exist"))
             return NULL;
     """)
-    result = run("--ignore=setup.py")
+    result = run(build_dir)
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
-        "test.*::import-check*FAILED*",
+        "build/test.*::import-check*FAILED*",
         "E*ModuleNotFoundError*this_package_really_shouldnt_exist*",
     ])
     # check whether we got nicely stripped traceback
@@ -105,14 +108,14 @@ def test_c_ext_import_nonexisting(pytester, run, build_c_ext):
 
 def test_c_ext_import_syntax_error(pytester, run, build_c_ext):
     pytester.makepyfile(bad="/ / /")
-    build_c_ext(code="""
+    build_dir = build_c_ext(code="""
         if (!PyImport_ImportModule("bad"))
             return NULL;
     """)
-    result = run("--ignore=setup.py", "--ignore=bad.py")
+    result = run(build_dir)
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
-        "test.*::import-check*FAILED*",
+        "build/test.*::import-check*FAILED*",
         "E*File*/bad.py*line 1",
         "*/ / /",
         "*SyntaxError:*",
@@ -123,14 +126,14 @@ def test_c_ext_import_syntax_error(pytester, run, build_c_ext):
 
 
 def test_c_ext_exception(pytester, run, build_c_ext):
-    build_c_ext(code="""
+    build_dir = build_c_ext(code="""
         PyErr_SetString(PyExc_ValueError, "Imma failing");
         return NULL;
     """)
-    result = run("--ignore=setup.py")
+    result = run(build_dir)
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
-        "test.*::import-check*FAILED*",
+        "build/test.*::import-check*FAILED*",
         "E*ValueError*Imma failing*",
     ])
     # check whether we got nicely stripped traceback
@@ -140,14 +143,14 @@ def test_c_ext_exception(pytester, run, build_c_ext):
 
 def test_c_ext_import_indirect_nonexisting(pytester, run, build_c_ext):
     pytester.makepyfile(bad="import this_package_really_shouldnt_exist")
-    build_c_ext(code="""
+    build_dir = build_c_ext(code="""
         if (!PyImport_ImportModule("bad"))
             return NULL;
     """)
-    result = run("--ignore=setup.py", "--ignore=bad.py")
+    result = run(build_dir)
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines([
-        "test.*::import-check*FAILED*",
+        "build/test.*::import-check*FAILED*",
         ">*import this_package_really_shouldnt_exist",
         "E*ModuleNotFoundError:*",
         "bad.py:1: ModuleNotFoundError",
