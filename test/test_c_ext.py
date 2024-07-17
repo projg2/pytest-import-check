@@ -165,7 +165,7 @@ def test_c_library(pytester, run):
             return 0;
         }
     """)
-    pytester.makefile(".build", meson=f"""
+    pytester.makefile(".build", meson="""
         project('test', 'c')
 
         testlib = shared_library('testlib', ['test.c'])
