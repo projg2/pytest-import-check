@@ -3,4 +3,4 @@
 
 """pytest plugin to check whether Python modules can be imported"""
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
